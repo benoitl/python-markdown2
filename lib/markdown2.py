@@ -2165,7 +2165,7 @@ class VideoUrlHandler(object):
                 param.set('value', 'true')
                 flash.append(param)
 
-                return flash.tostring()
+                return etree.tostring(flash)
 
         return None
 
