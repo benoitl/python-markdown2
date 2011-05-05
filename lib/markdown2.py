@@ -2144,7 +2144,7 @@ class VideoUrlHandler(object):
         the etree manipulation copied from mdx_video extension
         for the original markdown module
         """
-        for name, data in providers.items():
+        for name, data in self.providers.items():
             m = data['regex'].match(url)
             if m:
                 stream_url = data['stream_url'] % m.group('param')
