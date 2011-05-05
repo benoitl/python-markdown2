@@ -2150,7 +2150,7 @@ class VideoUrlHandler(object):
                 stream_url = data['stream_url'] % m.group('param')
 
                 flash = etree.Element('object')
-                obj.set('type', 'application/x-shockwave-flash')
+                flash.set('type', 'application/x-shockwave-flash')
                 flash.set('data', stream_url)
                 flash.set('width', str(data['width']))
                 flash.set('height', str(data['height']))
@@ -2158,12 +2158,12 @@ class VideoUrlHandler(object):
                 param = markdown.etree.Element('param')
                 param.set('name', 'movie')
                 param.set('value', stream_url)
-                obj.append(param)
+                flash.append(param)
 
                 param = markdown.etree.Element('param')
                 param.set('name', 'allowFullScreen')
                 param.set('value', 'true')
-                obj.append(param)
+                flash.append(param)
 
                 return flash.tostring()
 
