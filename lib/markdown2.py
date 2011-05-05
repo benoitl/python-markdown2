@@ -218,6 +218,9 @@ class Markdown(object):
         if "smarty-pants" in self.extras:
             self._escape_table['"'] = _hash_ascii('"')
             self._escape_table["'"] = _hash_ascii("'")
+        if "video" in self.extras:
+            self._video = VideoUrlHandler()
+
 
     def reset(self):
         self.urls = {}
@@ -1026,10 +1029,21 @@ class Markdown(object):
                     else:
                         title_str = ''
                     if is_img:
-                        result = '<img src="%s" alt="%s"%s%s' \
-                            % (url.replace('"', '&quot;'),
-                               _xml_escape_attr(link_text),
-                               title_str, self.empty_element_suffix)
+                        #if 'video' extra is enabled
+                        if 'video' in self.extras:
+                            result = this._video.get_video_html(url)
+                            #should this copy/paste be cleaned up?
+                            if result is None:
+                                result = '<img src="%s" alt="%s"%s%s' \
+                                    % (url.replace('"', '&quot;'),
+                                       _xml_escape_attr(link_text),
+                                       title_str, self.empty_element_suffix)
+
+                        else:
+                            result = '<img src="%s" alt="%s"%s%s' \
+                                % (url.replace('"', '&quot;'),
+                                   _xml_escape_attr(link_text),
+                                   title_str, self.empty_element_suffix)
                         curr_pos = start_idx + len(result)
                         text = text[:start_idx] + result + text[match.end():]
                     elif start_idx >= anchor_allowed_pos:
@@ -1072,10 +1086,21 @@ class Markdown(object):
                         else:
                             title_str = ''
                         if is_img:
-                            result = '<img src="%s" alt="%s"%s%s' \
-                                % (url.replace('"', '&quot;'),
-                                   link_text.replace('"', '&quot;'),
-                                   title_str, self.empty_element_suffix)
+                            if "video" in self._extras:
+                                result = this._video.get_video_html(url)
+                                if result == None:
+                                    #again - copy/paste - see else branch below
+                                    result = '<img src="%s" alt="%s"%s%s' \
+                                        % (url.replace('"', '&quot;'),
+                                           link_text.replace('"', '&quot;'),
+                                           title_str, self.empty_element_suffix)
+                            else:
+                                #why the code for images here is different from
+                                #the one for the inline version?
+                                result = '<img src="%s" alt="%s"%s%s' \
+                                    % (url.replace('"', '&quot;'),
+                                       link_text.replace('"', '&quot;'),
+                                       title_str, self.empty_element_suffix)
                             curr_pos = start_idx + len(result)
                             text = text[:start_idx] + result + text[match.end():]
                         elif start_idx >= anchor_allowed_pos:
@@ -2046,6 +2071,103 @@ def _xml_encode_email_char_at_random(ch):
         return '&#%s;' % ord(ch)
 
 
+def _is_video_url(url):
+    """True, if url matches a video hosting service
+    data copied from
+    http://code.google.com/p/python-markdown-video/source/browse/mdx_video.py?r=0.1.6
+    Format:
+        provider name
+        embed url pattern
+        stream url pattern
+        width x height
+        height
+
+    * bliptv 
+      r'([^(]|^)http://(\w+\.|)blip.tv/file/get/(?P<param>\S+.flv)'
+      'http://blip.tv/scripts/flash/showplayer.swf?file=http://blip.tv/file/get/%s' % m.group('param')
+      480 x 300
+
+    * dailymotion
+      r'([^(]|^)http://www\.dailymotion\.com/(?P<param>\S+)'
+      'http://www.dailymotion.com/swf/%s' % m.group('param').split('/')[-1]
+      480 x 405
+
+    * gametrailers
+      r'([^(]|^)http://www.gametrailers.com/video/[a-z0-9-]+/(?P<param>\d+)'
+      'http://www.gametrailers.com/remote_wrap.php?mid=%s' % m.group('param').split('/')[-1]
+      480 x 392
+
+    * metacafe
+      r'([^(]|^)http://www\.metacafe\.com/watch/(?P<param>\S+)/'
+      'http://www.metacafe.com/fplayer/%s.swf' % m.group('param')
+      498 x 423
+
+    * veoh
+      r'([^(]|^)http://www\.veoh\.com/\S*(#watch%3D|watch/)(?P<param>\w+)'
+      'http://www.veoh.com/videodetails2.swf?permalinkId=%s' % m.group('param')
+      410 x 341
+
+    * vimeo'
+      r'([^(]|^)http://(www.|)vimeo\.com/(?P<param>\d+)\S*'
+      'http://vimeo.com/moogaloop.swf?clip_id=%s&amp;server=vimeo.com' % m.group('param')
+      400 x 321
+
+    * yahoo - two parameters in the url
+      r'([^(]|^)http://video\.yahoo\.com/watch/(?P<yahoovid>\d+)/(?P<yahooid>\d+)'
+      http://d.yimg.com/static.video.yahoo.com/yep/YV_YEP.swf?ver=2.2.40
+      special case - requires xml subtructure for the parameters
+      512 x 322
+
+    * youtube
+      r'([^(]|^)http://www\.youtube\.com/watch\?\S*v=(?P<param>[A-Za-z0-9_&=-]+)\S*'
+      'http://www.youtube.com/v/%s' % m.group('param')
+      425 x 344
+    """
+    video_regex = re.compile(r'([^(]|^)http://www\.youtube\.com/watch\?\S*v=(?P<param>[A-Za-z0-9_&=-]+)\S*')
+    return re.match(url)
+
+from xml.etree import ElementTree as etree
+class VideoUrlHandler(object):
+    providers = {
+        'youtube': {
+            'regex': re.compile(r'([^(]|^)http://www\.youtube\.com/watch\?\S*v=(?P<param>[A-Za-z0-9_&=-]+)\S*'),
+            'stream_url': 'http://www.youtube.com/v/%s',
+            'width': 425,
+            'height': 344
+        },
+    }
+
+    def get_video_html(self, url):
+        """returns name of the video provider
+        or None if url does not match any
+
+        the etree manipulation copied from mdx_video extension
+        for the original markdown module
+        """
+        for name, data in providers.items():
+            m = data['regex'].match(url)
+            if m:
+                stream_url = data['stream_url'] % m.group('param')
+
+                flash = etree.Element('object')
+                obj.set('type', 'application/x-shockwave-flash')
+                flash.set('data', stream_url)
+                flash.set('width', str(data['width']))
+                flash.set('height', str(data['height']))
+
+                param = markdown.etree.Element('param')
+                param.set('name', 'movie')
+                param.set('value', stream_url)
+                obj.append(param)
+
+                param = markdown.etree.Element('param')
+                param.set('name', 'allowFullScreen')
+                param.set('value', 'true')
+                obj.append(param)
+
+                return flash.tostring()
+
+        return None
 
 #---- mainline
 
