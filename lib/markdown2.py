@@ -2155,12 +2155,12 @@ class VideoUrlHandler(object):
                 flash.set('width', str(data['width']))
                 flash.set('height', str(data['height']))
 
-                param = markdown.etree.Element('param')
+                param = etree.Element('param')
                 param.set('name', 'movie')
                 param.set('value', stream_url)
                 flash.append(param)
 
-                param = markdown.etree.Element('param')
+                param = etree.Element('param')
                 param.set('name', 'allowFullScreen')
                 param.set('value', 'true')
                 flash.append(param)
