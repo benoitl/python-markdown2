@@ -1031,7 +1031,7 @@ class Markdown(object):
                     if is_img:
                         #if 'video' extra is enabled
                         if 'video' in self.extras:
-                            result = this._video.get_video_html(url)
+                            result = self._video.get_video_html(url)
                             #should this copy/paste be cleaned up?
                             if result is None:
                                 result = '<img src="%s" alt="%s"%s%s' \
@@ -1087,7 +1087,7 @@ class Markdown(object):
                             title_str = ''
                         if is_img:
                             if "video" in self._extras:
-                                result = this._video.get_video_html(url)
+                                result = self._video.get_video_html(url)
                                 if result == None:
                                     #again - copy/paste - see else branch below
                                     result = '<img src="%s" alt="%s"%s%s' \
