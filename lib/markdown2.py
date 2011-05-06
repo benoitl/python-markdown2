@@ -221,7 +221,6 @@ class Markdown(object):
         if "video" in self.extras:
             self._video = VideoUrlHandler()
 
-
     def reset(self):
         self.urls = {}
         self.titles = {}
@@ -1031,7 +1030,7 @@ class Markdown(object):
                     if is_img:
                         #if 'video' extra is enabled
                         if 'video' in self.extras:
-                            result = self._video.get_video_html(url)
+                            result = self._video.get_embed_video_xml(url)
                             #should this copy/paste be cleaned up?
                             if result is None:
                                 result = '<img src="%s" alt="%s"%s%s' \
@@ -1087,7 +1086,7 @@ class Markdown(object):
                             title_str = ''
                         if is_img:
                             if "video" in self._extras:
-                                result = self._video.get_video_html(url)
+                                result = self._video.get_embed_video_xml(url)
                                 if result == None:
                                     #again - copy/paste - see else branch below
                                     result = '<img src="%s" alt="%s"%s%s' \
@@ -1689,10 +1688,17 @@ class Markdown(object):
             text = text.replace("\\"+ch, escape)
         return text
 
-    _auto_link_re = re.compile(r'<((https?|ftp):[^\'">\s]+)>', re.I)
+    _auto_link_re = re.compile("((?<!(href|.src|data)=['\"])((http|https|ftp)\://([a-zA-Z0-9\.\-]+(\:[a-zA-Z0-9\.&amp;%\$\-]+)*@)*((25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9])\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9]|0)\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9]|0)\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[0-9])|localhost|([a-zA-Z0-9\-]+\.)*[a-zA-Z0-9\-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{2}))(\:[0-9]+)*(/($|[a-zA-Z0-9\.\,\?\'\\\+&amp;%\$#\=~_\-]+))*))")
     def _auto_link_sub(self, match):
         g1 = match.group(1)
-        return '<a href="%s">%s</a>' % (g1, g1)
+        if "video" in self.extras:
+            video_html = self._video.get_embed_video_xml(g1)
+            if video_html == None:
+                return '<a href="%s">%s</a>' % (g1, g1)
+            else:
+                return video_html
+        else:
+            return '<a href="%s">%s</a>' % (g1, g1)
 
     _auto_email_link_re = re.compile(r"""
           <
@@ -2137,7 +2143,7 @@ class VideoUrlHandler(object):
         },
     }
 
-    def get_video_html(self, url):
+    def get_embed_video_xml(self, url):
         """returns name of the video provider
         or None if url does not match any
 
@@ -2165,7 +2171,7 @@ class VideoUrlHandler(object):
                 param.set('value', 'true')
                 flash.append(param)
 
-                return etree.tostring(flash)
+                return '<p>' + etree.tostring(flash) + '</p>'
 
         return None
 
