@@ -60,6 +60,8 @@ Supported extras (see -x|--extras option below):
   and ellipses.
 * toc: The returned HTML string gets a new "toc_html" attribute which is
   a Table of Contents for the document. (experimental)
+* video: Embed video (YouTube only as of now) - either just drop a link
+  or use the image insertion syntax
 * xml: Passes one-liner processing instructions and namespaced XML tags.
 """
 
